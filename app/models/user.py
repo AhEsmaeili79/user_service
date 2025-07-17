@@ -1,11 +1,12 @@
 import enum
 import uuid
 from sqlalchemy.sql import func
-from sqlalchemy.dialects.sqlite import UUID
+import uuid
 from sqlalchemy import Column, String, DateTime, Enum
-from sqlalchemy.ext.declarative import declarative_base
+from app.db.database import Base
 
-Base = declarative_base()
+from sqlalchemy.orm import Mapped, mapped_column
+
 
 class UserRole(str, enum.Enum):
     user = "user"
@@ -14,7 +15,7 @@ class UserRole(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, unique=True, nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
     name = Column(String(100), nullable=False, index=True)  # Specify a maximum length for name
     phone_number = Column(String(15), unique=True, nullable=False, index=True)  # Limit phone number length
     password_hash = Column(String, nullable=False)

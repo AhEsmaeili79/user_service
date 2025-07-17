@@ -1,7 +1,11 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,declarative_base
 
-DATABASE_URL = "sqlite:///app.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_PATH = os.path.join(BASE_DIR, "user_service.db")
+DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
@@ -11,8 +15,8 @@ Base = declarative_base()
 
 #check if the database is connected write OK and if not write ERROR
 def get_db():
+    db = SessionLocal()
     try:
-        db = SessionLocal()
         yield db
     finally:
         db.close()
