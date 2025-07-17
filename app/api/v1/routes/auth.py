@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session 
 from sqlalchemy import or_
-from app.db.database import SessionLocal
-from app.models.user import User
-from app.models.blacklisted_token import BlacklistedToken
-from app.services.auth.jwt_handler import create_access_token,decode_access_token
+from db.database import SessionLocal
+from models.user import User
+from models.blacklisted_token import BlacklistedToken
+from services.auth.jwt_handler import create_access_token,decode_access_token
 from passlib.hash import bcrypt
 from typing import cast
 from pydantic import BaseModel

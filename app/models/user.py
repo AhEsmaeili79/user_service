@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy.sql import func
 import uuid
 from sqlalchemy import Column, String, DateTime, Enum
-from app.db.database import Base
+from db.database import Base
 
 from sqlalchemy.orm import Mapped, mapped_column
 

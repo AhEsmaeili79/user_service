@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.db.database import SessionLocal
-from app.models.user import User
-from app.schemas.user_schema import UserCreate , UserOut
+from db.database import SessionLocal
+from models.user import User
+from schemas.user_schema import UserCreate , UserOut
 from passlib.hash import bcrypt
 
 router = APIRouter(prefix='/users',tags=["users"])
