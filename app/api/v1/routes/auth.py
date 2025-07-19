@@ -1,42 +1,15 @@
-import token
 from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session 
 from sqlalchemy import or_
-from db.database import SessionLocal
+from db.database import get_db
 from models.user import User
 from models.blacklisted_token import BlacklistedToken
 from services.auth.jwt_handler import create_access_token,decode_access_token,create_refresh_token,decode_refresh_token
 from passlib.hash import bcrypt
-from typing import cast
-from pydantic import BaseModel
+from schemas.user_schema import LoginRequest, TokenResponse, RefreshRequest, LogoutResponse,LogoutRequest
 
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
-
-
-class LoginRequest(BaseModel):
-    identifier: str
-    password: str
-    
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-class LogoutResponse(BaseModel):
-    refresh_token: str
-    msg: str
-    
-    
-def get_db():
-    db = SessionLocal()
-    try: 
-        yield db
-    finally:
-        db.close()
-        
     
 # login
 @router.post("/login", response_model=TokenResponse)
@@ -86,15 +59,15 @@ def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
     refresh_token = create_refresh_token({"user_id": user.id})
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
-
 # check current user
+
 
 
 # logout
 @router.post("/logout", response_model=LogoutResponse)
 def logout(
-    authorization: str = Header(..., description="Authorization token with Bearer scheme", example="Bearer eyJ0eXAiOiJKV1QiLCJhbGci..."),
-    request: LoginRequest = None,
+    authorization: str = Header(..., description="Authorization token with Bearer scheme", example="Bearer eyJ0eXAiOiJKV1QiLCJhbGci"),
+    request: LogoutRequest = None,
     db: Session = Depends(get_db)
 ):
     access_token = authorization.replace("Bearer ", "")

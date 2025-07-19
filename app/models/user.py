@@ -5,8 +5,6 @@ import uuid
 from sqlalchemy import Column, String, DateTime, Enum
 from db.database import Base
 
-from sqlalchemy.orm import Mapped, mapped_column
-
 
 class UserRole(str, enum.Enum):
     user = "user"

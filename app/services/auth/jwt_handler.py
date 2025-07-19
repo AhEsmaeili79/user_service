@@ -29,9 +29,9 @@ def decode_access_token(token: str):
     except jwt.InvalidTokenError:
         return None
     
-def decode_access_token(token: str):
+def decode_refresh_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         return None

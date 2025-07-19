@@ -1,4 +1,3 @@
-import token
 import uuid 
 from sqlalchemy import Column, String, DateTime, ForeignKey
 from db.database import Base
