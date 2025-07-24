@@ -23,21 +23,3 @@ class UserOut(BaseModel):
         from_attributes = True
         
         
-class LoginRequest(BaseModel):
-    identifier: str
-    password: str
-    
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: str
-    
-class RefreshRequest(BaseModel):
-    refresh_token: str
-
-class LogoutResponse(BaseModel):
-    refresh_token: str
-    msg: str
-
-class LogoutRequest(BaseModel):
-    refresh_token: str
-    
