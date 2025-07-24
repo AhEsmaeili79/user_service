@@ -22,4 +22,13 @@ class UserOut(BaseModel):
     class Config:
         from_attributes = True
         
+class UserUpdate(BaseModel):
+    name: str | None = None
+    phone_number: str | None = None
+    email: str | None = None
+    avatar_url: str | None = None
+    card_number: str | None = None
+    card_holder_name: str | None = None
+
+
         
