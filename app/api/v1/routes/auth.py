@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session 
 from sqlalchemy import or_
-from db.database import get_db
+from app.db.database import get_db
 from passlib.hash import bcrypt
-from models.user import User
-from models.blacklisted_token import BlacklistedToken
-from services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token,decode_refresh_token
-from schemas.auth_schema import LoginRequest, TokenResponse, RefreshRequest, LogoutResponse
+from app.models.user import User
+from app.models.blacklisted_token import BlacklistedToken
+from app.services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token,decode_refresh_token
+from app.schemas.auth_schema import LoginRequest, TokenResponse, RefreshRequest, LogoutResponse
 
 
 router = APIRouter(prefix="/auth",tags=["Auth"])

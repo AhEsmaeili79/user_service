@@ -1,9 +1,9 @@
 import re
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from models.user import User
-from schemas.user_schema import UserUpdate
-from utils.validators import FIELD_VALIDATORS
+from app.models.user import User
+from app.schemas.user_schema import UserUpdate
+from app.utils.validators import FIELD_VALIDATORS
 
 def validate_and_update_user(user: User, update: UserUpdate, db: Session):
     updates = update.model_dump(exclude_unset=True)

@@ -1,6 +1,6 @@
 import uuid 
 from sqlalchemy import Column, String, DateTime, ForeignKey
-from db.database import Base
+from app.db.database import Base
 from sqlalchemy.sql import func
 
 class BlacklistedToken(Base):

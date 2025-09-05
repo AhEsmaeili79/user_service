@@ -3,7 +3,7 @@ import uuid
 from sqlalchemy.sql import func
 import uuid
 from sqlalchemy import Column, String, DateTime, Enum
-from db.database import Base
+from app.db.database import Base
 
 
 class UserRole(str, enum.Enum):

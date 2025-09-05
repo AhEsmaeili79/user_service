@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
-from models.user import User
-from schemas.user_schema import UserCreate , UserOut, UserUpdate
+from app.models.user import User
+from app.schemas.user_schema import UserCreate , UserOut, UserUpdate
 from passlib.hash import bcrypt
-from db.database import get_db
-from services.auth.jwt_handler import decode_access_token
-from models.blacklisted_token import BlacklistedToken
-from services.user_service import validate_and_update_user
+from app.db.database import get_db
+from app.services.auth.jwt_handler import decode_access_token
+from app.models.blacklisted_token import BlacklistedToken
+from app.services.user_service import validate_and_update_user
 
 router = APIRouter(prefix='/users',tags=["users"])
         
