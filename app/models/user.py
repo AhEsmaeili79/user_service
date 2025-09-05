@@ -21,7 +21,7 @@ class User(Base):
     card_number = Column(String, nullable=True)
     card_holder_name = Column(String, nullable=True)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.user)  # Set default role
-    email = Column(String(255), unique=True, nullable=False, index=True)  # Limit email length
+    email = Column(String(255), unique=True, nullable=True, index=True)  # Limit email length
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
