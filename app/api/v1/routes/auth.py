@@ -6,12 +6,23 @@ from passlib.hash import bcrypt
 from app.models.user import User, UserRole
 from app.models.blacklisted_token import BlacklistedToken
 from app.services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token,decode_refresh_token
-from app.schemas.auth_schema import PhoneCheckRequest, AuthCheckResponse, PasswordLoginRequest, SignupRequest, TokenResponse, RefreshRequest, LogoutResponse
+from app.schemas.auth_schema import IdentifierRequest, AuthCheckResponse, PasswordLoginRequest, SignupRequest, TokenResponse, RefreshRequest, LogoutResponse
 
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
-    
-    
+
+
+def is_email(identifier: str) -> bool:
+    """Check if identifier is an email address"""
+    import re
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(email_pattern, identifier) is not None
+
+def get_identifier_type(identifier: str) -> str:
+    """Determine if identifier is email or phone_number"""
+    return "email" if is_email(identifier) else "phone_number"
+
+
 # check current user
 @router.post("/check-user")
 def check_user(
@@ -31,19 +42,38 @@ def check_user(
 
 
     
-# Check if user exists by phone number
+# Check if user exists by email or phone number
 @router.post("/check", response_model=AuthCheckResponse)
-def check_user_exists(request: PhoneCheckRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.phone_number == request.phone_number).first()
-    if user:
-        return AuthCheckResponse(user_exists=True, message="User exists. Please provide password to login.")
+def check_user_exists(request: IdentifierRequest, db: Session = Depends(get_db)):
+    identifier_type = get_identifier_type(request.identifier)
+
+    if identifier_type == "email":
+        user = db.query(User).filter(User.email == request.identifier).first()
     else:
-        return AuthCheckResponse(user_exists=False, message="User does not exist. Please provide name, password, and optional email to signup.")
+        user = db.query(User).filter(User.phone_number == request.identifier).first()
+
+    if user:
+        return AuthCheckResponse(
+            user_exists=True,
+            message="User exists. Please provide password to login.",
+            identifier_type=identifier_type
+        )
+    else:
+        return AuthCheckResponse(
+            user_exists=False,
+            message="User does not exist. Please provide name and password to signup.",
+            identifier_type=identifier_type
+        )
 
 # Login with password for existing user
 @router.post("/login", response_model=TokenResponse)
 def login(request: PasswordLoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.phone_number == request.phone_number).first()
+    identifier_type = get_identifier_type(request.identifier)
+
+    if identifier_type == "email":
+        user = db.query(User).filter(User.email == request.identifier).first()
+    else:
+        user = db.query(User).filter(User.phone_number == request.identifier).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found. Please check user existence first.")
@@ -65,26 +95,48 @@ def login(request: PasswordLoginRequest, db: Session = Depends(get_db)):
 # Signup for new user
 @router.post("/signup", response_model=TokenResponse)
 def signup(request: SignupRequest, db: Session = Depends(get_db)):
-    # Check if phone number already exists
-    existing_phone = db.query(User).filter(User.phone_number == request.phone_number).first()
-    if existing_phone:
-        raise HTTPException(status_code=400, detail="Phone number already registered")
+    identifier_type = get_identifier_type(request.identifier)
 
-    # Check if email is provided and already exists
-    if request.email:
-        existing_email = db.query(User).filter(User.email == request.email).first()
-        if existing_email:
-            raise HTTPException(status_code=400, detail="Email already registered")
+    # Check if identifier already exists
+    if identifier_type == "email":
+        existing_user = db.query(User).filter(
+            or_(User.email == request.identifier, User.phone_number == request.identifier)
+        ).first()
+        if existing_user:
+            if existing_user.email == request.identifier:
+                raise HTTPException(status_code=400, detail="Email already registered")
+            else:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+    else:  # phone_number
+        existing_user = db.query(User).filter(
+            or_(User.phone_number == request.identifier, User.email == request.identifier)
+        ).first()
+        if existing_user:
+            if existing_user.phone_number == request.identifier:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+            else:
+                raise HTTPException(status_code=400, detail="Email already registered")
 
     # Create new user
     hashed_password = bcrypt.hash(request.password)
-    new_user = User(
-        name=request.name,
-        phone_number=request.phone_number,
-        email=request.email if request.email else None,
-        password_hash=hashed_password,
-        role=UserRole.user  # Default role
-    )
+
+    if identifier_type == "email":
+        new_user = User(
+            name=request.name,
+            phone_number=None,
+            email=request.identifier,
+            password_hash=hashed_password,
+            role=UserRole.user  # Default role
+        )
+    else:  # phone_number
+        new_user = User(
+            name=request.name,
+            phone_number=request.identifier,
+            email=None,
+            password_hash=hashed_password,
+            role=UserRole.user  # Default role
+        )
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

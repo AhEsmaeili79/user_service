@@ -145,7 +145,9 @@ user_service/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/auth/login` | User login with email/phone and password |
+| `POST` | `/auth/check` | Check if user exists with email or phone number |
+| `POST` | `/auth/login` | User login with email/phone identifier and password |
+| `POST` | `/auth/signup` | User registration with email or phone identifier |
 | `POST` | `/auth/refresh` | Refresh access token using refresh token |
 | `POST` | `/auth/logout` | Logout and blacklist current token |
 | `POST` | `/auth/check-user` | Validate current access token |

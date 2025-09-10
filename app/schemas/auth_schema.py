@@ -1,25 +1,43 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, validator
+from typing import Optional, Union
 
-class PhoneCheckRequest(BaseModel):
-    phone_number: str
+class IdentifierRequest(BaseModel):
+    identifier: str  # Can be either email or phone_number
+
+    @validator('identifier')
+    def validate_identifier(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Identifier cannot be empty')
+        return v.strip()
 
 class AuthCheckResponse(BaseModel):
     user_exists: bool
     message: str
+    identifier_type: Optional[str] = None  # "email" or "phone_number"
 
 class PasswordLoginRequest(BaseModel):
-    phone_number: str
+    identifier: str  # Can be either email or phone_number
     password: str
 
+    @validator('identifier')
+    def validate_identifier(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Identifier cannot be empty')
+        return v.strip()
+
 class SignupRequest(BaseModel):
-    phone_number: str
+    identifier: str  # Can be either email or phone_number
     name: str
     password: str
-    email: Optional[str] = None
 
     class Config:
         extra = "forbid"  # Prevent extra fields
+
+    @validator('identifier')
+    def validate_identifier(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Identifier cannot be empty')
+        return v.strip()
 
 class TokenResponse(BaseModel):
     access_token: str
