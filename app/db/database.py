@@ -2,12 +2,15 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,declarative_base
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_PATH = os.path.join(BASE_DIR, "user_service.db")
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+# Get database URL from environment variable, fallback to SQLite for development
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./user_service.db")
 
-
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# Configure engine based on database type
+if DATABASE_URL.startswith("postgresql"):
+    engine = create_engine(DATABASE_URL)
+else:
+    # SQLite configuration for fallback
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
