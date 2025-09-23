@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  user-service:
+    build: 
+      context: .
+      # tags:
+        # - kharjam/user-service:latest
+        # - kharjam/user-service:v1.0.0
+    image: kharjam/user-service:v1.0.0
+    container_name: kharjam-user-service
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/user_service
+    volumes:
+      - ./app/db:/user_service/app/db
+      - ./logs:/user_service/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
