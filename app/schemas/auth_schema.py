@@ -15,20 +15,10 @@ class AuthCheckResponse(BaseModel):
     message: str
     identifier_type: Optional[str] = None  # "email" or "phone_number"
 
-class PasswordLoginRequest(BaseModel):
-    identifier: str  # Can be either email or phone_number
-    password: str
-
-    @validator('identifier')
-    def validate_identifier(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Identifier cannot be empty')
-        return v.strip()
 
 class SignupRequest(BaseModel):
     identifier: str  # Can be either email or phone_number
     name: str
-    password: str
 
     class Config:
         extra = "forbid"  # Prevent extra fields

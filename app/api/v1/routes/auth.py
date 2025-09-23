@@ -2,11 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.db.database import get_db
-from passlib.hash import bcrypt
 from app.models.user import User, UserRole
 from app.models.blacklisted_token import BlacklistedToken
 from app.services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token,decode_refresh_token
-from app.schemas.auth_schema import IdentifierRequest, AuthCheckResponse, PasswordLoginRequest, SignupRequest, TokenResponse, RefreshRequest, LogoutResponse
+from app.schemas.auth_schema import IdentifierRequest, AuthCheckResponse, SignupRequest, TokenResponse, RefreshRequest, LogoutResponse
 
 
 router = APIRouter(prefix="/auth",tags=["Auth"])
@@ -65,32 +64,6 @@ def check_user_exists(request: IdentifierRequest, db: Session = Depends(get_db))
             identifier_type=identifier_type
         )
 
-# Login with password for existing user
-@router.post("/login", response_model=TokenResponse)
-def login(request: PasswordLoginRequest, db: Session = Depends(get_db)):
-    identifier_type = get_identifier_type(request.identifier)
-
-    if identifier_type == "email":
-        user = db.query(User).filter(User.email == request.identifier).first()
-    else:
-        user = db.query(User).filter(User.phone_number == request.identifier).first()
-
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found. Please check user existence first.")
-
-    if not bcrypt.verify(request.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid password")
-
-    # Handle None email properly
-    access_token = create_access_token({
-        "user_id": user.id,
-        "email": user.email,
-        "phone_number": user.phone_number
-    })
-    refresh_token = create_refresh_token({
-        "user_id": user.id
-    })
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 # Signup for new user
 @router.post("/signup", response_model=TokenResponse)
@@ -118,14 +91,11 @@ def signup(request: SignupRequest, db: Session = Depends(get_db)):
                 raise HTTPException(status_code=400, detail="Email already registered")
 
     # Create new user
-    hashed_password = bcrypt.hash(request.password)
-
     if identifier_type == "email":
         new_user = User(
             name=request.name,
             phone_number=None,
             email=request.identifier,
-            password_hash=hashed_password,
             role=UserRole.user  # Default role
         )
     else:  # phone_number
@@ -133,7 +103,6 @@ def signup(request: SignupRequest, db: Session = Depends(get_db)):
             name=request.name,
             phone_number=request.identifier,
             email=None,
-            password_hash=hashed_password,
             role=UserRole.user  # Default role
         )
 

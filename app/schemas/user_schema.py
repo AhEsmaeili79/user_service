@@ -10,7 +10,6 @@ class UserCreate(BaseModel):
     name : str
     phone_number : str
     email : Optional[str] = None
-    password : str
     role : RoleEnum
 
 class UserOut(BaseModel):

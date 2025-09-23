@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user_schema import UserCreate , UserOut, UserUpdate
-from passlib.hash import bcrypt
 from app.db.database import get_db
 from app.services.auth.jwt_handler import decode_access_token
 from app.models.blacklisted_token import BlacklistedToken

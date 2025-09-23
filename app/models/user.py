@@ -16,7 +16,6 @@ class User(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), unique=True, nullable=False)
     name = Column(String(100), nullable=False, index=True)  # Specify a maximum length for name
     phone_number = Column(String(15), unique=True, nullable=False, index=True)  # Limit phone number length
-    password_hash = Column(String, nullable=False)
     avatar_url = Column(String, nullable=True)
     card_number = Column(String, nullable=True)
     card_holder_name = Column(String, nullable=True)
