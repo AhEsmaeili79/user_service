@@ -49,10 +49,10 @@ def request_otp(request: RequestOTPRequest, db: Session = Depends(get_db)):
         db.refresh(user)
 
     # Create OTP
-    otp = OTPHandler.create_otp(user.id, db)
+    otp = OTPHandler.create_otp(user.id)
 
     # Send OTP message to RabbitMQ
-    success = OTPHandler.send_otp_message(request.identifier, otp.code, identifier_type)
+    success = OTPHandler.send_otp_message(request.identifier, otp["code"], identifier_type)
 
     if not success:
         raise HTTPException(status_code=500, detail="Failed to send OTP message")
@@ -76,7 +76,7 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User not found. Please request OTP first.")
 
     # Validate OTP
-    if not OTPHandler.validate_otp(user.id, request.otp_code, db):
+    if not OTPHandler.validate_otp(user.id, request.otp_code):
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
     # Check if this is a new user (temporary user created during OTP request)
