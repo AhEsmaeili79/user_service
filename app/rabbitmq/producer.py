@@ -34,39 +34,30 @@ class RabbitMQProducer:
             self.connection.close()
         logger.info("RabbitMQ producer disconnected")
     
-    def publish_otp_message(self, identifier: str, otp_code: str, identifier_type: str) -> bool:
+    def publish_otp_message(self, identifier: str, otp_code: str, routing_key: str) -> bool:
         """
-        Publish OTP message to appropriate queue based on identifier type
-        
+        Publish OTP message to appropriate queue
+
         Args:
             identifier: Email or phone number
             otp_code: The OTP code to send
-            identifier_type: "email" or "phone"
-        
+            routing_key: The routing key to use ("otp.email.send" or "otp.sms.send")
+
         Returns:
             bool: True if message published successfully, False otherwise
         """
         if not self.connection or self.connection.is_closed:
             self.connect()
-        
+
         try:
             # Prepare message data
+            from datetime import datetime
             message_data = {
                 "identifier": identifier,
                 "otp_code": otp_code,
-                "identifier_type": identifier_type,
-                "timestamp": None  # Will be set by the consumer
+                "timestamp": datetime.utcnow().isoformat()
             }
-            
-            # Determine routing key and queue
-            if identifier_type == "email":
-                routing_key = rabbitmq_config.email_routing_key
-            elif identifier_type == "phone":
-                routing_key = rabbitmq_config.sms_routing_key
-            else:
-                logger.error(f"Invalid identifier type: {identifier_type}")
-                return False
-            
+
             # Publish message
             self.channel.basic_publish(
                 exchange=rabbitmq_config.otp_exchange,
@@ -77,21 +68,21 @@ class RabbitMQProducer:
                     content_type='application/json'
                 )
             )
-            
-            logger.info(f"Published OTP message for {identifier_type}: {identifier}")
+
+            logger.info(f"Published OTP message to {routing_key}: {identifier}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to publish OTP message: {e}")
             return False
     
     def publish_email_otp(self, email: str, otp_code: str) -> bool:
         """Convenience method for publishing email OTP"""
-        return self.publish_otp_message(email, otp_code, "email")
-    
+        return self.publish_otp_message(email, otp_code, rabbitmq_config.email_routing_key)
+
     def publish_sms_otp(self, phone_number: str, otp_code: str) -> bool:
         """Convenience method for publishing SMS OTP"""
-        return self.publish_otp_message(phone_number, otp_code, "phone")
+        return self.publish_otp_message(phone_number, otp_code, rabbitmq_config.sms_routing_key)
 
 
 # Global producer instance
