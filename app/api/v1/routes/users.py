@@ -12,7 +12,7 @@ router = APIRouter(prefix='/users',tags=["users"])
 # User creation is now handled through /auth/signup endpoint
 
 # Get current user info
-@router.get("/profile", response_model=UserOut)
+@router.get("/profile", response_model=UserOut, operation_id="getProfileApi")
 def get_current_user_info(
     access_token: str = Header(..., description="Access token (without Bearer)"),
     db: Session = Depends(get_db)
@@ -28,7 +28,7 @@ def get_current_user_info(
     return user
 
 # Update user profile
-@router.patch("/profile", response_model=UserOut)
+@router.patch("/profile", response_model=UserOut, operation_id="updateProfileApi")
 def update_user_profile(
     update: UserUpdate,
     access_token: str = Header(..., description="Access token (without Bearer)"),

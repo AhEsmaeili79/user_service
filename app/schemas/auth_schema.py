@@ -31,7 +31,6 @@ class RequestOTPRequest(BaseModel):
 class VerifyOTPRequest(BaseModel):
     identifier: str  # Can be either email or phone_number
     otp_code: str
-    name: Optional[str] = None  # Required only for new users
 
     @field_validator('identifier')
     @classmethod

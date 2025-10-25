@@ -19,7 +19,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 # Request OTP endpoint
-@router.post("/request-otp", response_model=RequestOTPResponse)
+@router.post("/request-otp", response_model=RequestOTPResponse, operation_id="requestOtpApi")
 def request_otp(request: RequestOTPRequest, db: Session = Depends(get_db)):
     """Request an OTP to be sent to the user's email or phone"""
 
@@ -32,14 +32,14 @@ def request_otp(request: RequestOTPRequest, db: Session = Depends(get_db)):
         # This will be used to store the OTP temporarily
         if identifier_type == "email":
             user = User(
-                name="Temporary",  # Will be updated during verification
+                name="",  # Will be updated during verification
                 email=request.identifier,
                 phone_number=None,
                 role=UserRole.user
             )
         else:
             user = User(
-                name="Temporary",  # Will be updated during verification
+                name="",  # Will be updated during verification
                 email=None,
                 phone_number=request.identifier,
                 role=UserRole.user
@@ -64,7 +64,7 @@ def request_otp(request: RequestOTPRequest, db: Session = Depends(get_db)):
 
 
 # Verify OTP endpoint (merges signup and login logic)
-@router.post("/verify-otp", response_model=VerifyOTPResponse)
+@router.post("/verify-otp", response_model=VerifyOTPResponse, operation_id="verifyOtpApi")
 def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     """Verify OTP and authenticate user. Creates new user if doesn't exist."""
 
@@ -79,19 +79,13 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     if not OTPHandler.validate_otp(user.id, request.otp_code):
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    # Check if this is a new user (temporary user created during OTP request)
-    is_new_user = user.name == "Temporary"
+    # Check if this is a new user (empty name indicates new user)
+    is_new_user = user.name == "" or user.name is None
 
+    # For new users, we don't require name during OTP verification
+    # Users can add their name later through profile update
     if is_new_user:
-        # This is a new user - require name
-        if not request.name:
-            raise HTTPException(status_code=400, detail="Name is required for new user registration")
-
-        # Update user information
-        user.name = request.name
-        db.commit()
-    else:
-        # Existing user - no need for name
+        # Keep the temporary name for now, user can update it later
         pass
 
     # Generate tokens
@@ -112,7 +106,7 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
 
 
 # Check current user
-@router.post("/check-user")
+@router.post("/check-user", operation_id="checkUserApi", include_in_schema=False)
 def check_user(
     access_token: str = Header(..., description="Access token (without Bearer)"),
     db: Session = Depends(get_db)
@@ -129,7 +123,7 @@ def check_user(
 
 
 # Refresh token
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", response_model=TokenResponse, operation_id="refreshTokenApi")
 def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
     payload = decode_refresh_token(request.refresh_token)
     if not payload:
@@ -154,7 +148,7 @@ def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
 
 
 # Logout
-@router.post("/logout", response_model=LogoutResponse)
+@router.post("/logout", response_model=LogoutResponse, operation_id="logoutApi")
 def logout(
     access_token: str = Header(..., description="Access token (without Bearer)"),
     db: Session = Depends(get_db)

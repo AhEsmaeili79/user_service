@@ -4,7 +4,7 @@ import sqlalchemy
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
-@router.get("/")
+@router.get("/", operation_id="healthCheckApi", include_in_schema=False)
 def health_check():
     try:
         db_ok = True
