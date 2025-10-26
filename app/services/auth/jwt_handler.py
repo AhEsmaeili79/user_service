@@ -1,11 +1,32 @@
 import jwt
 from datetime import datetime, timedelta
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from typing import Optional
 
 SECRET_KEY = "your_secret_key"
 REFRESH_SECRET_KEY = "your_refresh_secret_key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Security scheme for Swagger UI
+security = HTTPBearer()
+
+
+def extract_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> str:
+    """
+    Extract token from Authorization header.
+    Supports both 'Bearer token' and 'token' formats.
+    """
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    
+    token = credentials.credentials
+    if not token:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    return token
 
 
 def create_access_token(data: dict):

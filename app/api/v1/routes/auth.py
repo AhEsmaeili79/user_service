@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User, UserRole
 from app.models.blacklisted_token import BlacklistedToken
-from app.services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token, decode_refresh_token
+from app.services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token, decode_refresh_token, extract_token
 from app.services.auth.otp_handler import OTPHandler
 from app.schemas.auth_schema import (
     RequestOTPRequest,
@@ -108,16 +108,14 @@ def verify_otp(request: VerifyOTPRequest, db: Session = Depends(get_db)):
 # Check current user
 @router.post("/check-user", operation_id="checkUserApi", include_in_schema=False)
 def check_user(
-    access_token: str = Header(..., description="Access token (without Bearer)"),
+    token: str = Depends(extract_token),
     db: Session = Depends(get_db)
 ):
-    if access_token.startswith("Bearer "):
-        access_token = access_token.replace("Bearer ", "")
-    payload = decode_access_token(access_token)
+    payload = decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     # Check if token is blacklisted
-    if db.query(BlacklistedToken).filter_by(token=access_token).first():
+    if db.query(BlacklistedToken).filter_by(token=token).first():
         raise HTTPException(status_code=401, detail="Token blacklisted")
     return {"msg": "Token is valid"}
 
@@ -125,12 +123,20 @@ def check_user(
 # Refresh token
 @router.post("/refresh", response_model=TokenResponse, operation_id="refreshTokenApi")
 def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
-    payload = decode_refresh_token(request.refresh_token)
+    refresh_token = request.refresh_token
+    
+    payload = decode_refresh_token(refresh_token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    if db.query(BlacklistedToken).filter_by(token=request.refresh_token).first():
-        raise HTTPException(status_code=401, detail="Token Blacklisted")
+    # Check Redis blacklist first (faster)
+    from app.services.auth.blacklist import is_token_blacklisted
+    if is_token_blacklisted(refresh_token):
+        raise HTTPException(status_code=401, detail="Token blacklisted")
+
+    # Also check database blacklist for consistency
+    if db.query(BlacklistedToken).filter_by(token=refresh_token).first():
+        raise HTTPException(status_code=401, detail="Token blacklisted")
 
     user_id = payload["user_id"]
     user = db.query(User).filter_by(id=user_id).first()
@@ -142,25 +148,29 @@ def refresh_token(request: RefreshRequest, db: Session = Depends(get_db)):
         "email": user.email,
         "phone_number": user.phone_number
     })
-    refresh_token = create_refresh_token({"user_id": user.id})
+    new_refresh_token = create_refresh_token({"user_id": user.id})
 
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
 
 
 # Logout
 @router.post("/logout", response_model=LogoutResponse, operation_id="logoutApi")
-def logout(
-    access_token: str = Header(..., description="Access token (without Bearer)"),
-    db: Session = Depends(get_db)
-):
-    if access_token.startswith("Bearer "):
-        access_token = access_token.replace("Bearer ", "")
-
-    payload = decode_access_token(access_token)
+def logout(request: RefreshRequest, db: Session = Depends(get_db)):
+    refresh_token = request.refresh_token
+    
+    payload = decode_refresh_token(refresh_token)
     if not payload:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    db.add(BlacklistedToken(user_id=payload["user_id"], token=access_token))
+    user_id = payload["user_id"]
+    
+    # Blacklist refresh token in database
+    db.add(BlacklistedToken(user_id=user_id, token=refresh_token))
     db.commit()
-    return {"msg": "Token blacklisted successfully"}
+    
+    # Also blacklist in Redis for faster access (7 days expiration)
+    from app.services.auth.blacklist import blacklist_token
+    blacklist_token(refresh_token, expires_in=7*24*3600)  # 7 days
+    
+    return {"msg": "Logged out successfully"}
 

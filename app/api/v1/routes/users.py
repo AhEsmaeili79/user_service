@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.user_schema import UserCreate , UserOut, UserUpdate
 from app.db.database import get_db
-from app.services.auth.jwt_handler import decode_access_token
+from app.services.auth.jwt_handler import decode_access_token, extract_token
 from app.models.blacklisted_token import BlacklistedToken
 from app.services.user_service import validate_and_update_user
 
@@ -14,12 +14,14 @@ router = APIRouter(prefix='/users',tags=["users"])
 # Get current user info
 @router.get("/profile", response_model=UserOut, operation_id="getProfileApi")
 def get_current_user_info(
-    access_token: str = Header(..., description="Access token (without Bearer)"),
+    token: str = Depends(extract_token),
     db: Session = Depends(get_db)
 ):
-    if access_token.startswith("Bearer "):
-        access_token = access_token.replace("Bearer ", "")
-    payload = decode_access_token(access_token)
+    # Check if token is blacklisted
+    if db.query(BlacklistedToken).filter_by(token=token).first():
+        raise HTTPException(status_code=401, detail="Token blacklisted")
+    
+    payload = decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
     user = db.query(User).filter_by(id=payload["user_id"]).first()
@@ -31,12 +33,13 @@ def get_current_user_info(
 @router.patch("/profile", response_model=UserOut, operation_id="updateProfileApi")
 def update_user_profile(
     update: UserUpdate,
-    access_token: str = Header(..., description="Access token (without Bearer)"),
+    token: str = Depends(extract_token),
     db: Session = Depends(get_db)
 ):
-    token = access_token.removeprefix("Bearer ").strip()
+    # Check if token is blacklisted
     if db.query(BlacklistedToken).filter_by(token=token).first():
         raise HTTPException(status_code=401, detail="Token blacklisted")
+    
     payload = decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
