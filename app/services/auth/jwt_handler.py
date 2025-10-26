@@ -3,12 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
-
-SECRET_KEY = "your_secret_key"
-REFRESH_SECRET_KEY = "your_refresh_secret_key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+from app.core.config import jwt_config
 
 # Security scheme for Swagger UI
 security = HTTPBearer()
@@ -31,19 +26,19 @@ def extract_token(credentials: HTTPAuthorizationCredentials = Security(security)
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now() + timedelta(minutes=jwt_config.access_token_expire_minutes)
     to_encode.update({"exp":expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, jwt_config.secret_key, algorithm=jwt_config.algorithm)
     
 def create_refresh_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.now() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now() + timedelta(days=jwt_config.refresh_token_expire_days)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, jwt_config.refresh_secret_key, algorithm=jwt_config.algorithm)
     
 def decode_access_token(token: str):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, jwt_config.secret_key, algorithms=[jwt_config.algorithm])
         return payload
     except jwt.ExpiredSignatureError:
         return None
@@ -52,7 +47,7 @@ def decode_access_token(token: str):
     
 def decode_refresh_token(token: str):
     try:
-        payload = jwt.decode(token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, jwt_config.refresh_secret_key, algorithms=[jwt_config.algorithm])
         return payload
     except jwt.ExpiredSignatureError:
         return None
