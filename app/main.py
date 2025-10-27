@@ -4,7 +4,7 @@ from app.db.database import Base, engine
 from app.api.v1.routes import users, auth, health
 from app.rabbitmq.setup import init_rabbitmq
 from app.redis.setup import init_redis
-from app.services.user_lookup_consumer import start_user_lookup_consumer
+from app.services.user_lookup_consumer import start_consumer
 
 # Initialize database with error handling
 try:
@@ -17,13 +17,12 @@ except Exception as e:
 init_rabbitmq()
 init_redis()
 
-# Start user lookup consumer with error handling
+# Start consumer
 try:
-    start_user_lookup_consumer()
-    print("✅ User lookup consumer started successfully")
+    start_consumer()
+    print("✅ Consumer started")
 except Exception as e:
-    print(f"⚠️  Warning: Failed to start user lookup consumer: {e}")
-    print("   Application will continue without user lookup functionality")
+    print(f"⚠️ Consumer failed: {e}")
 
 # Create FastAPI application
 app = FastAPI(

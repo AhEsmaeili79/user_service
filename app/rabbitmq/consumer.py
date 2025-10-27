@@ -145,45 +145,28 @@ def create_otp_message_callback(handler_func: Callable) -> Callable:
     return callback
 
 
-def create_user_lookup_callback(handler_func: Callable) -> Callable:
-    """
-    Create a callback function for processing user lookup messages
-    
-    Args:
-        handler_func: Function to handle the user lookup message processing
-    
-    Returns:
-        Callback function for RabbitMQ consumer
-    """
+def create_user_lookup_callback(handler: Callable) -> Callable:
+    """Ultra-clean callback creator"""
     def callback(ch, method, properties, body):
         try:
-            # Parse message
-            message_data = json.loads(body.decode('utf-8'))
-            request_id = message_data.get('request_id', 'UNKNOWN')
+            data = json.loads(body.decode('utf-8'))
+            request_id = data.get('request_id', 'UNKNOWN')
             
-            logger.info(f"📨 RABBITMQ MESSAGE RECEIVED:")
-            logger.info(f"   🆔 Request ID: {request_id}")
-            logger.info(f"   📞 Phone/Email: {message_data.get('phone_or_email', 'N/A')}")
-            logger.info(f"   🏷️  Group Slug: {message_data.get('group_slug', 'N/A')}")
-            logger.info(f"   ⏰ Timestamp: {message_data.get('timestamp', 'N/A')}")
-            
-            # Process the message
-            success = handler_func(message_data)
+            logger.info(f"📨 {request_id}")
+            success = handler(data)
             
             if success:
-                # Acknowledge message
                 ch.basic_ack(delivery_tag=method.delivery_tag)
-                logger.info(f"✅ MESSAGE ACKNOWLEDGED: Request {request_id} processed successfully")
+                logger.info(f"✅ {request_id}")
             else:
-                # Reject message and requeue
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-                logger.warning(f"⚠️  MESSAGE REQUEUED: Request {request_id} processing failed, requeuing")
+                logger.warning(f"⚠️ {request_id}")
                 
         except json.JSONDecodeError as e:
-            logger.error(f"❌ JSON PARSE ERROR: Failed to parse user lookup message JSON: {e}")
+            logger.error(f"❌ JSON: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         except Exception as e:
-            logger.error(f"💥 PROCESSING ERROR: Error processing user lookup message: {e}")
+            logger.error(f"💥 Error: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
     
     return callback
