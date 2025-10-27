@@ -83,6 +83,47 @@ class RabbitMQProducer:
     def publish_sms_otp(self, phone_number: str, otp_code: str) -> bool:
         """Convenience method for publishing SMS OTP"""
         return self.publish_otp_message(phone_number, otp_code, rabbitmq_config.sms_routing_key)
+    
+    def publish_message(self, exchange: str, routing_key: str, message: Dict[str, Any], correlation_id: Optional[str] = None) -> bool:
+        """
+        Generic method for publishing messages to any exchange
+        
+        Args:
+            exchange: Exchange name
+            routing_key: Routing key
+            message: Message data as dictionary
+            correlation_id: Optional correlation ID
+            
+        Returns:
+            bool: True if message published successfully, False otherwise
+        """
+        if not self.connection or self.connection.is_closed:
+            self.connect()
+
+        try:
+            # Prepare properties
+            properties = pika.BasicProperties(
+                delivery_mode=2,  # Make message persistent
+                content_type='application/json'
+            )
+            
+            if correlation_id:
+                properties.correlation_id = correlation_id
+
+            # Publish message
+            self.channel.basic_publish(
+                exchange=exchange,
+                routing_key=routing_key,
+                body=json.dumps(message),
+                properties=properties
+            )
+
+            logger.info(f"Published message to {exchange} with key {routing_key}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to publish message to {exchange}: {e}")
+            return False
 
 
 # Global producer instance

@@ -50,13 +50,30 @@ class RabbitMQConsumer:
             self.connect()
         
         try:
-            # Declare queue to ensure it exists
-            self.channel.queue_declare(
-                queue=queue_name,
-                durable=True,
-                exclusive=False,
-                auto_delete=False
-            )
+            # Try to declare queue with TTL arguments first
+            try:
+                self.channel.queue_declare(
+                    queue=queue_name,
+                    durable=True,
+                    exclusive=False,
+                    auto_delete=False,
+                    arguments={
+                        'x-message-ttl': rabbitmq_config.message_ttl
+                    }
+                )
+                logger.info(f"Declared queue with TTL: {queue_name}")
+            except Exception as e:
+                logger.warning(f"Failed to declare queue {queue_name} with TTL: {e}")
+                # Try to declare without arguments if it already exists
+                try:
+                    self.channel.queue_declare(
+                        queue=queue_name,
+                        passive=True
+                    )
+                    logger.info(f"Queue {queue_name} already exists")
+                except Exception as e2:
+                    logger.error(f"Failed to verify queue {queue_name}: {e2}")
+                    raise
             
             # Setup consumer
             self.channel.basic_consume(
@@ -123,6 +140,50 @@ def create_otp_message_callback(handler_func: Callable) -> Callable:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         except Exception as e:
             logger.error(f"Error processing OTP message: {e}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+    
+    return callback
+
+
+def create_user_lookup_callback(handler_func: Callable) -> Callable:
+    """
+    Create a callback function for processing user lookup messages
+    
+    Args:
+        handler_func: Function to handle the user lookup message processing
+    
+    Returns:
+        Callback function for RabbitMQ consumer
+    """
+    def callback(ch, method, properties, body):
+        try:
+            # Parse message
+            message_data = json.loads(body.decode('utf-8'))
+            request_id = message_data.get('request_id', 'UNKNOWN')
+            
+            logger.info(f"📨 RABBITMQ MESSAGE RECEIVED:")
+            logger.info(f"   🆔 Request ID: {request_id}")
+            logger.info(f"   📞 Phone/Email: {message_data.get('phone_or_email', 'N/A')}")
+            logger.info(f"   🏷️  Group Slug: {message_data.get('group_slug', 'N/A')}")
+            logger.info(f"   ⏰ Timestamp: {message_data.get('timestamp', 'N/A')}")
+            
+            # Process the message
+            success = handler_func(message_data)
+            
+            if success:
+                # Acknowledge message
+                ch.basic_ack(delivery_tag=method.delivery_tag)
+                logger.info(f"✅ MESSAGE ACKNOWLEDGED: Request {request_id} processed successfully")
+            else:
+                # Reject message and requeue
+                ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+                logger.warning(f"⚠️  MESSAGE REQUEUED: Request {request_id} processing failed, requeuing")
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"❌ JSON PARSE ERROR: Failed to parse user lookup message JSON: {e}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+        except Exception as e:
+            logger.error(f"💥 PROCESSING ERROR: Error processing user lookup message: {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
     
     return callback

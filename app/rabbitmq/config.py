@@ -20,15 +20,20 @@ class RabbitMQConfig(BaseSettings):
     
     # Exchange settings
     otp_exchange: str = "user.otp.exchange"
+    user_lookup_exchange: str = "user.lookup.exchange"
     exchange_type: str = "topic"
     
     # Queue settings
     email_queue: str = "user.otp.email.queue"
     sms_queue: str = "user.otp.sms.queue"
+    user_lookup_request_queue: str = "user.lookup.request.queue"
+    user_lookup_response_queue: str = "user.lookup.response.queue"
     
     # Routing keys
     email_routing_key: str = "otp.email.send"
     sms_routing_key: str = "otp.sms.send"
+    user_lookup_request_key: str = "user.lookup.request"
+    user_lookup_response_key: str = "user.lookup.response"
     
     # Message settings
     message_ttl: int = int(os.getenv("RABBITMQ_MESSAGE_TTL", "300000"))  # 5 minutes in milliseconds

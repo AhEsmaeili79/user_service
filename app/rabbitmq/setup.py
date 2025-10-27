@@ -56,6 +56,15 @@ class RabbitMQSetup:
             )
             logger.info(f"Declared exchange: {rabbitmq_config.otp_exchange}")
             
+            # Declare the user lookup exchange
+            self.channel.exchange_declare(
+                exchange=rabbitmq_config.user_lookup_exchange,
+                exchange_type=rabbitmq_config.exchange_type,
+                durable=True,
+                auto_delete=False
+            )
+            logger.info(f"Declared exchange: {rabbitmq_config.user_lookup_exchange}")
+            
             # Declare email queue
             self.channel.queue_declare(
                 queue=rabbitmq_config.email_queue,
@@ -80,6 +89,30 @@ class RabbitMQSetup:
             )
             logger.info(f"Declared queue: {rabbitmq_config.sms_queue}")
             
+            # Declare user lookup request queue
+            self.channel.queue_declare(
+                queue=rabbitmq_config.user_lookup_request_queue,
+                durable=True,
+                exclusive=False,
+                auto_delete=False,
+                arguments={
+                    'x-message-ttl': rabbitmq_config.message_ttl
+                }
+            )
+            logger.info(f"Declared queue: {rabbitmq_config.user_lookup_request_queue}")
+            
+            # Declare user lookup response queue
+            self.channel.queue_declare(
+                queue=rabbitmq_config.user_lookup_response_queue,
+                durable=True,
+                exclusive=False,
+                auto_delete=False,
+                arguments={
+                    'x-message-ttl': rabbitmq_config.message_ttl
+                }
+            )
+            logger.info(f"Declared queue: {rabbitmq_config.user_lookup_response_queue}")
+            
             # Bind email queue to exchange
             self.channel.queue_bind(
                 exchange=rabbitmq_config.otp_exchange,
@@ -95,6 +128,22 @@ class RabbitMQSetup:
                 routing_key=rabbitmq_config.sms_routing_key
             )
             logger.info(f"Bound {rabbitmq_config.sms_queue} to {rabbitmq_config.otp_exchange} with key {rabbitmq_config.sms_routing_key}")
+            
+            # Bind user lookup request queue to exchange
+            self.channel.queue_bind(
+                exchange=rabbitmq_config.user_lookup_exchange,
+                queue=rabbitmq_config.user_lookup_request_queue,
+                routing_key=rabbitmq_config.user_lookup_request_key
+            )
+            logger.info(f"Bound {rabbitmq_config.user_lookup_request_queue} to {rabbitmq_config.user_lookup_exchange} with key {rabbitmq_config.user_lookup_request_key}")
+            
+            # Bind user lookup response queue to exchange
+            self.channel.queue_bind(
+                exchange=rabbitmq_config.user_lookup_exchange,
+                queue=rabbitmq_config.user_lookup_response_queue,
+                routing_key=rabbitmq_config.user_lookup_response_key
+            )
+            logger.info(f"Bound {rabbitmq_config.user_lookup_response_queue} to {rabbitmq_config.user_lookup_exchange} with key {rabbitmq_config.user_lookup_response_key}")
             
         except Exception as e:
             logger.error(f"Failed to setup RabbitMQ exchanges and queues: {e}")
