@@ -93,7 +93,9 @@ class JWTConfig(BaseSettings):
 class AppConfig(BaseSettings):
     """Application configuration settings"""
 
-    pythonpath: str = os.getenv("PYTHONPATH", "/user_service")
+    pythonpath: str = os.getenv("PYTHONPATH")
+    # CORS Settings - comma-separated list of allowed origins
+    cors_origins: str = os.getenv("CORS_ORIGINS")
 
     class Config:
         env_file = ".env"

@@ -7,7 +7,7 @@ from app.services.auth.jwt_handler import decode_access_token, extract_token
 from app.models.blacklisted_token import BlacklistedToken
 from app.services.user_service import validate_and_update_user
 
-router = APIRouter(prefix='/users',tags=["users"])
+router = APIRouter(prefix='/users',tags=["User"])
         
 # User creation is now handled through /auth/signup endpoint
 

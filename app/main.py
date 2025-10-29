@@ -1,10 +1,12 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.db.database import Base, engine
 from app.api.v1.routes import users, auth, health
 from app.rabbitmq.setup import init_rabbitmq
 from app.redis.setup import init_redis
 from app.services.user_lookup_consumer import start_consumer
+from app.core.config import app_config
 
 # Initialize database with error handling
 try:
@@ -31,6 +33,16 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Configure CORS middleware
+# Allow all origins for development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
 
 app.include_router(health.router)
 app.include_router(users.router)
