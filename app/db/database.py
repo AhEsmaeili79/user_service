@@ -7,7 +7,15 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./user_service.db")
 
 # Configure engine based on database type
 if DATABASE_URL.startswith("postgresql"):
-    engine = create_engine(DATABASE_URL)
+    # For PostgreSQL, add connection pooling settings to handle authentication issues
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Verify connections before using them
+        pool_size=5,  # Number of connections to maintain
+        max_overflow=10,  # Max connections beyond pool_size
+        pool_recycle=3600,  # Recycle connections after 1 hour
+        echo=False  # Set to True for SQL debugging
+    )
 else:
     # SQLite configuration for fallback
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
