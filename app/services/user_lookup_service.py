@@ -2,12 +2,15 @@
 Ultra-clean user lookup service
 """
 import logging
+import re
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.db.database import SessionLocal
 from app.models.user import User
 from app.rabbitmq.producer import get_rabbitmq_producer
 from app.rabbitmq.config import rabbitmq_config
+from app.utils.validators import normalize_phone_number
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +37,22 @@ class UserLookupService:
     
     def _find_user(self, db: Session, phone_or_email: str) -> Optional[User]:
         """Find user in database"""
-        return (db.query(User).filter(User.phone_number == phone_or_email).first() or
-                db.query(User).filter(User.email == phone_or_email).first())
+        # Check if it's an email or phone
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        is_email = re.match(email_pattern, phone_or_email) is not None
+        
+        if is_email:
+            return db.query(User).filter(User.email == phone_or_email).first()
+        else:
+            # Normalize phone number before querying
+            # Check both normalized and original to handle existing data with '+'
+            normalized_phone = normalize_phone_number(phone_or_email)
+            return db.query(User).filter(
+                or_(
+                    User.phone_number == normalized_phone,
+                    User.phone_number == phone_or_email
+                )
+            ).first()
     
     def _to_dict(self, user: User) -> Dict[str, Any]:
         """Convert user to dictionary"""

@@ -1,6 +1,12 @@
 import re
 from fastapi import HTTPException
 
+def normalize_phone_number(phone: str) -> str:
+    """Normalize phone number by removing leading '+' if present"""
+    if not phone:
+        return phone
+    return phone.lstrip('+')
+
 def validate_name(value):
     if not re.match(r"^[A-Za-z\s]{2,100}$", value):
         raise HTTPException(status_code=400, detail="Invalid name format")

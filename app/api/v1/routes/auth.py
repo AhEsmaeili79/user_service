@@ -5,6 +5,7 @@ from app.models.user import User, UserRole
 from app.models.blacklisted_token import BlacklistedToken
 from app.services.auth.jwt_handler import create_access_token, decode_access_token, create_refresh_token, decode_refresh_token, extract_token
 from app.services.auth.otp_handler import OTPHandler
+from app.utils.validators import normalize_phone_number
 from app.schemas.auth_schema import (
     RequestOTPRequest,
     RequestOTPResponse,
@@ -38,10 +39,12 @@ def request_otp(request: RequestOTPRequest, db: Session = Depends(get_db)):
                 role=UserRole.user
             )
         else:
+            # Normalize phone number before storing in database
+            normalized_phone = normalize_phone_number(request.identifier)
             user = User(
                 name="",  # Will be updated during verification
                 email=None,
-                phone_number=request.identifier,
+                phone_number=normalized_phone,
                 role=UserRole.user
             )
         db.add(user)

@@ -2,9 +2,11 @@ import random
 import string
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.models.user import User
 from app.redis.cache import get_cache
 from app.rabbitmq.producer import get_rabbitmq_producer
+from app.utils.validators import normalize_phone_number
 from typing import Optional
 
 
@@ -96,7 +98,15 @@ class OTPHandler:
         if is_email:
             return db.query(User).filter(User.email == identifier).first()
         else:
-            return db.query(User).filter(User.phone_number == identifier).first()
+            # Normalize phone number before querying
+            # Check both normalized and original to handle existing data with '+'
+            normalized_phone = normalize_phone_number(identifier)
+            return db.query(User).filter(
+                or_(
+                    User.phone_number == normalized_phone,
+                    User.phone_number == identifier
+                )
+            ).first()
 
     @staticmethod
     def get_identifier_type(identifier: str) -> str:
